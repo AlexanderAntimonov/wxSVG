@@ -137,6 +137,10 @@ LIBS="$LIBS $EXPAT_LIBS"
 # check libexif
 PKG_CHECK_MODULES(LIBEXIF, libexif, [LIBS="$LIBS $LIBEXIF_LIBS"], [AC_MSG_ERROR([*** missing libexif ***])])
 
+# check for separate -latomic
+AC_SEARCH_LIBS([__atomic_fetch_add_4], [atomic])
+AC_SEARCH_LIBS([__atomic_load_8], [atomic])
+
 # check ffmpeg
 AM_CONDITIONAL(USE_LIBAV, [test x$enable_libav = xyes])
 if test x$enable_libav = xyes; then
