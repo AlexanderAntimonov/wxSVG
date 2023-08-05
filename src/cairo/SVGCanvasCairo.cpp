@@ -14,6 +14,7 @@
 #include "SVGCanvasImageCairo.h"
 #include <wx/log.h>
 #include <wx/file.h>
+#include <cstdint>
 
 wxSVGCanvasCairo::~wxSVGCanvasCairo() {
 	Destroy();
