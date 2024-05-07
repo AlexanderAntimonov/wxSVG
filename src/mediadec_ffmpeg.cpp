@@ -46,11 +46,11 @@ wxFfmpegMediaDecoder::wxFfmpegMediaDecoder(): m_formatCtx(NULL), m_videoStream(-
 }
 
 wxFfmpegMediaDecoder::~wxFfmpegMediaDecoder() {
-    Close();
+	Close();
 }
 
 void wxFfmpegMediaDecoder::Init() {
-    // nothing to do
+	// nothing to do
 #if LIBAVCODEC_VERSION_INT < AV_VERSION_INT(58, 0, 0)
 	av_register_all();
 #endif
@@ -102,8 +102,8 @@ unsigned int wxFfmpegMediaDecoder::GetStreamCount() {
 }
 
 wxSize wxFfmpegMediaDecoder::GetVideoSize() {
-    OpenVideoDecoder();
-    return m_codecCtx ? wxSize(m_codecCtx->width, m_codecCtx->height) : wxSize();
+	OpenVideoDecoder();
+	return m_codecCtx ? wxSize(m_codecCtx->width, m_codecCtx->height) : wxSize();
 }
 
 AVStream* wxFfmpegMediaDecoder::GetVideoStream() {
@@ -230,9 +230,9 @@ void wxFfmpegMediaDecoder::CloseVideoDecoder() {
 }
 
 bool wxFfmpegMediaDecoder::BeginDecode(int width, int height) {
-    if (!m_formatCtx || !OpenVideoDecoder())
-        return false;
-    // video size
+	if (!m_formatCtx || !OpenVideoDecoder())
+		return false;
+	// video size
 	if (width == -1 || height == -1) {
 		m_width = m_codecCtx->width;
 		m_height = m_codecCtx->height;
@@ -242,35 +242,35 @@ bool wxFfmpegMediaDecoder::BeginDecode(int width, int height) {
 		m_width = w < width ? w : width;
 		m_height = w < width ? height : h;
 	}
-    // allocate video frame
-    m_frame = av_frame_alloc();
-    if (!m_frame) {
+	// allocate video frame
+	m_frame = av_frame_alloc();
+	if (!m_frame) {
 #if HAVE_AVCODEC_FREE_CONTEXT
 		avcodec_free_context(&m_codecCtx);
 #else
 		avcodec_close(m_codecCtx);
 #endif
-        m_codecCtx = NULL;
-        return false;
-    }
-    return true;
+		m_codecCtx = NULL;
+		return false;
+	}
+	return true;
 }
 
 bool wxFfmpegMediaDecoder::SetPosition(double pos, bool keyFrame, bool seekBackward) {
-    if (m_formatCtx == NULL)
-        return false;
+	if (m_formatCtx == NULL)
+		return false;
 	if (!m_frame && !BeginDecode())
 		return false;
-    int64_t timestamp = (int64_t) (pos * AV_TIME_BASE);
-    if (m_formatCtx->start_time != (int64_t)AV_NOPTS_VALUE)
-        timestamp += m_formatCtx->start_time;
-    avcodec_flush_buffers(m_codecCtx);
-    int flags = seekBackward ? AVSEEK_FLAG_BACKWARD : 0;
-    if (!keyFrame)
-    	flags = flags|AVSEEK_FLAG_ANY;
-    bool res = av_seek_frame(m_formatCtx, -1, timestamp, flags) >= 0;
-    avcodec_flush_buffers(m_codecCtx);
-    return res;
+	int64_t timestamp = (int64_t) (pos * AV_TIME_BASE);
+	if (m_formatCtx->start_time != (int64_t)AV_NOPTS_VALUE)
+		timestamp += m_formatCtx->start_time;
+	avcodec_flush_buffers(m_codecCtx);
+	int flags = seekBackward ? AVSEEK_FLAG_BACKWARD : 0;
+	if (!keyFrame)
+		flags = flags|AVSEEK_FLAG_ANY;
+	bool res = av_seek_frame(m_formatCtx, -1, timestamp, flags) >= 0;
+	avcodec_flush_buffers(m_codecCtx);
+	return res;
 }
 
 double wxFfmpegMediaDecoder::GetPosition() {
@@ -348,7 +348,7 @@ wxImage wxFfmpegMediaDecoder::GetNextFrame() {
 
 void wxFfmpegMediaDecoder::EndDecode() {
 	av_frame_free(&m_frame);
-    CloseVideoDecoder();
+	CloseVideoDecoder();
 }
 
 /** Returns a comma separated list of short names for the format. */
