@@ -37,6 +37,9 @@ extern "C" {
 #define av_packet_unref av_free_packet
 #endif
 
+#define HAVE_AVCODEC_FREE_CONTEXT (LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(55, 69, 100))
+#define HAVE_CH_LAYOUT (LIBAVUTIL_VERSION_INT >= AV_VERSION_INT(57, 28, 100))
+
 wxFfmpegMediaDecoder::wxFfmpegMediaDecoder(): m_formatCtx(NULL), m_videoStream(-1), m_codecCtx(NULL), m_frame(NULL),
 		m_width(0), m_height(0) {
 	// nothing to do
@@ -165,7 +168,11 @@ wxString wxFfmpegMediaDecoder::GetCodecName(unsigned int streamIndex) {
 }
 
 int wxFfmpegMediaDecoder::GetChannelNumber(unsigned int streamIndex) {
+#if HAVE_CH_LAYOUT
+	return m_formatCtx ? m_formatCtx->streams[streamIndex]->codecpar->ch_layout.nb_channels : -1;
+#else
 	return m_formatCtx ? m_formatCtx->streams[streamIndex]->codecpar->channels : -1;
+#endif
 }
 
 int wxFfmpegMediaDecoder::GetSampleRate(unsigned int streamIndex) {
@@ -213,9 +220,13 @@ bool wxFfmpegMediaDecoder::OpenVideoDecoder() {
 }
 
 void wxFfmpegMediaDecoder::CloseVideoDecoder() {
-    if (m_codecCtx)
-        avcodec_close(m_codecCtx); // close the codec
-    m_codecCtx = NULL;
+	if (m_codecCtx)
+#if HAVE_AVCODEC_FREE_CONTEXT
+		avcodec_free_context(&m_codecCtx);
+#else
+		avcodec_close(m_codecCtx); // close the codec
+#endif
+	m_codecCtx = NULL;
 }
 
 bool wxFfmpegMediaDecoder::BeginDecode(int width, int height) {
@@ -234,7 +245,11 @@ bool wxFfmpegMediaDecoder::BeginDecode(int width, int height) {
     // allocate video frame
     m_frame = av_frame_alloc();
     if (!m_frame) {
-        avcodec_close(m_codecCtx);
+#if HAVE_AVCODEC_FREE_CONTEXT
+		avcodec_free_context(&m_codecCtx);
+#else
+		avcodec_close(m_codecCtx);
+#endif
         m_codecCtx = NULL;
         return false;
     }
