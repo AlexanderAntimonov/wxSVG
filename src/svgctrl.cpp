@@ -122,12 +122,16 @@ void wxSVGCtrlBase::RepaintBuffer() {
 		m_repaintRect.y = wxMax(m_repaintRect.y, 0);
 		wxSVGRect rect(m_repaintRect.x / GetScaleX(), m_repaintRect.y / GetScaleY(),
 				m_repaintRect.width / GetScaleX(), m_repaintRect.height / GetScaleY());
-		wxBitmap bitmap = m_doc->Render(w, h, &rect);
+
+		const wxImage image = m_doc->Render(w, h, &rect);
+		wxBitmap bitmap = image.IsOk() ? image : wxImage(w, h);
 		wxMemoryDC dc;
 		dc.SelectObject(m_buffer);
 		dc.DrawBitmap(bitmap, m_repaintRect.x, m_repaintRect.y);
-	} else
-		m_buffer = wxBitmap(m_doc->Render(w, h));
+	} else {
+		const wxImage image = m_doc->Render(w, h);
+		m_buffer = wxBitmap(image.IsOk() ? image : wxImage(w, h));
+	}
 
 	m_repaintRect = wxRect();
 
