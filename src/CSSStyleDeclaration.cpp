@@ -12,6 +12,13 @@
 #include <wx/tokenzr.h>
 #include <wx/log.h>
 
+// wcstod() is slow on Darwin (macOS/iOS/etc.)
+#if defined(__DARWIN__) && defined(wxUSE_STD_STRING) && \
+	defined(wxUSE_UNICODE) && (!defined(wxUSE_UNICODE_UTF8) || wxUSE_UNICODE_UTF8 == 0)
+# include <xlocale.h>
+# define SLOW_WCSTOD
+#endif
+
 wxCSSPrimitiveValue* wxCSSStyleDeclaration::s_emptyCSSValue = new wxCSSPrimitiveValue;
 wxSVGColor* wxCSSStyleDeclaration::s_emptySVGColor = new wxSVGColor;
 wxSVGPaint* wxCSSStyleDeclaration::s_emptySVGPaint = new wxSVGPaint;
@@ -321,7 +328,12 @@ void wxCSSStyleDeclaration::SetProperty(wxCSS_PROPERTY propertyId, const wxSVGAn
 
 double wxCSSStyleDeclaration::ParseNumber(const wxString& value) {
 	double val = 0;
+#if defined(SLOW_WCSTOD)
+	std::string tmp = value.ToStdString();
+	val = strtod_l(tmp.c_str(), nullptr, LC_C_LOCALE);
+#else
 	value.ToDouble(&val);
+#endif
 	return val;
 }
 

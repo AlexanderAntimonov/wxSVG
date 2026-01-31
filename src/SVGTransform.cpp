@@ -12,6 +12,13 @@
 #include <wx/math.h>
 #include <wx/tokenzr.h>
 
+// wcstod() is slow on Darwin (macOS/iOS/etc.)
+#if defined(__DARWIN__) && defined(wxUSE_STD_STRING) && \
+	defined(wxUSE_UNICODE) && (!defined(wxUSE_UNICODE_UTF8) || wxUSE_UNICODE_UTF8 == 0)
+# include <xlocale.h>
+# define SLOW_WCSTOD
+#endif
+
 void wxSVGTransform::SetTranslate(double tx, double ty) {
 	m_type = wxSVG_TRANSFORM_TRANSLATE;
 	m_angle = 0;
@@ -103,7 +110,12 @@ void wxSVGTransform::SetValueAsString(const wxString& value) {
 	while (tkz.HasMoreTokens() && pi < 6) {
 		wxString tk = tkz.GetNextToken();
 		if (tk.length()) {
+#if defined(SLOW_WCSTOD)
+			std::string tmp = tk.ToStdString();
+			params[pi] = strtod_l(tmp.c_str(), nullptr, LC_C_LOCALE);
+#else
 			tk.ToDouble(&params[pi]);
+#endif
 			pi++;
 		}
 	}

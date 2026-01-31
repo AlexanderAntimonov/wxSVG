@@ -35,6 +35,13 @@
 #include <wx/arrimpl.cpp>
 WX_DEFINE_OBJARRAY(wxSVGPathSegListBase);
 
+// wcstod() is slow on Darwin (macOS/iOS/etc.)
+#if defined(__DARWIN__) && defined(wxUSE_STD_STRING) && \
+	defined(wxUSE_UNICODE) && (!defined(wxUSE_UNICODE_UTF8) || wxUSE_UNICODE_UTF8 == 0)
+# include <xlocale.h>
+# define SLOW_WCSTOD
+#endif
+
 void wxSVGPathSegList::DoCopy(const wxSVGPathSegList& src)
 {
   for (int i=0; i<(int)src.Count(); i++)
@@ -271,7 +278,13 @@ void wxSVGPathSegList::SetValueAsString(const wxString& value) {
 				pos = 1;
 				while (val.Length() > pos && isNumeric(val[pos], val[pos - 1]))
 					pos++;
+
+#if defined(SLOW_WCSTOD)
+				std::string tmp = val.Mid(0, pos).ToStdString();
+				number = strtod_l(tmp.c_str(), nullptr, LC_C_LOCALE);
+#else
 				val.Mid(0, pos).ToDouble(&number);
+#endif
 				numbers.Add(number);
 				val.Remove(0, pos);
 			} else
