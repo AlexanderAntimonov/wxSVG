@@ -30,6 +30,7 @@
 #include "SVGPathSegCurvetoQuadraticSmoothRel.h"
 
 #include "SVGNumberList.h"
+#include <cfloat>
 #include <wx/log.h>
 
 #include <wx/arrimpl.cpp>
@@ -37,7 +38,7 @@ WX_DEFINE_OBJARRAY(wxSVGPathSegListBase);
 
 // wcstod() is slow on Darwin (macOS/iOS/etc.)
 #if defined(__DARWIN__) && defined(wxUSE_STD_STRING) && \
-	defined(wxUSE_UNICODE) && (!defined(wxUSE_UNICODE_UTF8) || wxUSE_UNICODE_UTF8 == 0)
+    defined(wxUSE_UNICODE) && (!defined(wxUSE_UNICODE_UTF8) || wxUSE_UNICODE_UTF8 == 0)
 # include <xlocale.h>
 # define SLOW_WCSTOD
 #endif
@@ -254,41 +255,145 @@ inline bool isNumeric(wxChar ch, wxChar ch2) {
 		|| ((ch == wxT('+') || ch == wxT('-')) && (ch2 == wxT('E') || ch2 == wxT('e')));
 }
 
+namespace {
+/*
+https://www.w3.org/TR/SVG11/paths.html#PathDataBNF
+
+number:
+    sign? integer-constant
+    | sign? floating-point-constant
+
+integer-constant:
+    digit-sequence
+
+floating-point-constant:
+    fractional-constant exponent?
+    | digit-sequence exponent
+
+fractional-constant:
+    digit-sequence? "." digit-sequence
+    | digit-sequence "."
+
+exponent:
+    ( "e" | "E" ) sign? digit-sequence
+
+sign:
+    "+" | "-"
+
+digit-sequence:
+    digit
+    | digit digit-sequence
+
+digit:
+    "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9"
+*/
+
+/// Helper class to build number strings
+struct NumberBuilder
+{
+    NumberBuilder(wxString& tmp)
+    : m_number(tmp)
+    {
+        m_number.clear();
+        m_number.reserve(DBL_DECIMAL_DIG);
+    }
+
+    /// Appends next char to number
+    /// @param ch [in] Next char to append
+    /// @return true - number can be built further, false - end of number
+    bool append(wxChar ch)
+    {
+        if (std::isdigit(ch))
+            ;
+        else if (ch == wxT('.'))
+        {
+            if (m_hasFraction)
+                return false;
+            m_hasFraction = true;
+        }
+        else if (ch == wxT('-') || ch == wxT('+'))
+        {
+            if (!(m_number.empty() || m_number.Last() == wxT('e') || m_number.Last() == wxT('E')))
+                return false;
+        }
+        else if (ch == wxT('e') || ch == wxT('E'))
+        {
+            if (m_hasExponent)
+                return false;
+            m_hasExponent = true;
+        }
+        else
+            return false;
+
+        m_number.append(ch);
+        return true;
+    }
+
+    const wxString& str() const { return m_number; }
+
+private:
+    wxString& m_number;
+    bool m_hasFraction = false;
+    bool m_hasExponent = false;
+};
+
+const wxString s_separators = wxT(" ,\t\n\r");
+
+struct OneNumberResult
+{
+    double value;
+    size_t parserEndPosition;
+    bool success;
+};
+
+OneNumberResult getNextNumber(const wxString& str, size_t strStart, wxString& reusedTmp)
+{
+    size_t i = strStart;
+    for (; i < str.size() && s_separators.Find(str[i]) != wxNOT_FOUND; ++i);
+
+    if (i >= str.size() || !isNumericFirst(str[i]))
+        return { 0, i, false };
+
+    NumberBuilder builder(reusedTmp);
+    builder.append(str[i]);
+
+    for (++i; i < str.size() && builder.append(str[i]); ++i);
+
+    double number = 0;
+#if defined(SLOW_WCSTOD)
+    std::string tmp = builder.str().ToStdString();
+    number = strtod_l(tmp.c_str(), nullptr, LC_C_LOCALE);
+#else
+    builder.str().ToDouble(&number);
+#endif
+
+    return { number, i, true };
+}
+}
+
 void wxSVGPathSegList::SetValueAsString(const wxString& value) {
 	const wxString s_commands = wxT("MmZzLlHhVvCcSsQqTtAa");
-	const wxString s_separators = wxT(" ,\t\n\r");
 	wxChar type = 0;
-	double number;
 	wxSVGNumberList numbers;
-	wxString val = value;
-	while (val.Length() && s_separators.Find(val[0]) != wxNOT_FOUND)
-		val.Remove(0, 1);
-	while (val.Length()) {
-		if (s_commands.Find(val[0]) == wxNOT_FOUND)
-			break;
-		type = val.GetChar(0);
-		val.Remove(0, 1);
-		
-		while (val.Length()) {
-			while (val.Length() && s_separators.Find(val[0]) != wxNOT_FOUND)
-				val.Remove(0, 1);
-			
-			unsigned int pos;
-			if (val.Length() > 0 && isNumericFirst(val[0])) {
-				pos = 1;
-				while (val.Length() > pos && isNumeric(val[pos], val[pos - 1]))
-					pos++;
+	wxString tmp;
 
-#if defined(SLOW_WCSTOD)
-				std::string tmp = val.Mid(0, pos).ToStdString();
-				number = strtod_l(tmp.c_str(), nullptr, LC_C_LOCALE);
-#else
-				val.Mid(0, pos).ToDouble(&number);
-#endif
-				numbers.Add(number);
-				val.Remove(0, pos);
-			} else
+	size_t i = 0;
+	for (; i < value.size() && s_separators.Find(value[i]) != wxNOT_FOUND; ++i);
+
+	while (i < value.size())
+	{
+		if (s_commands.Find(value[i]) == wxNOT_FOUND)
+			break;
+
+		type = value.GetChar(i++);
+		while (i < value.size())
+		{
+			auto result = getNextNumber(value, i, tmp);
+			i = result.parserEndPosition;
+			if (!result.success)
 				break;
+
+			numbers.Add(result.value);
 		}
 
 		// new path segement
