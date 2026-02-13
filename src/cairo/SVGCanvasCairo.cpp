@@ -60,6 +60,9 @@ wxImage wxSVGCanvasCairo::GetImage() {
 	wxImage img;
 	int width = GetWidth();
 	int height = GetHeight();
+	if (width <= 0 || height <= 0)
+		return img;
+
 	img.Create(width, height);
 	if (m_alpha)
 		img.InitAlpha();

@@ -136,7 +136,7 @@ MainFrame::MainFrame(wxWindow *parent, const wxString& title, const wxPoint& pos
 }
 
 bool MainFrame::Open(const wxString& filename) {
-	bool ok = m_svgCtrl->Load(filename);
+	bool ok = m_svgCtrl->Load(filename) && m_svgCtrl->GetSVG() && m_svgCtrl->GetSVG()->GetRootElement();
 	m_duration = ok ? m_svgCtrl->GetSVG()->GetDuration() : 0;
 	if (m_duration > 0) {
 		wxCommandEvent evt;

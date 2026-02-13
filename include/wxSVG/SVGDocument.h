@@ -19,6 +19,7 @@ class wxProgressDialog;
 #include "String_wxsvg.h"
 #include "SVGRect.h"
 #include "SVGMatrix.h"
+#include "SVGElement.h"
 #include <wx/image.h>
 
 class wxSVGDocument:
@@ -75,7 +76,16 @@ class wxSVGDocument:
     wxString GetTitle();
     void SetTitle(const wxString& n);
     
-    wxSVGSVGElement* GetRootElement() { return (wxSVGSVGElement*) GetRoot(); }
+    wxSVGSVGElement* GetRootElement() {
+        wxSvgXmlNode* node = GetRoot();
+        if (node->GetType() == wxSVGXML_ELEMENT_NODE)
+        {
+            wxSVGElement* root = (wxSVGElement*) node;
+            return root && root->GetDtd() == wxSVG_SVG_ELEMENT ? (wxSVGSVGElement*) root : nullptr;
+        }
+        else
+            return nullptr;
+    }
     void SetRootElement(wxSVGSVGElement* n) { SetRoot((wxSvgXmlElement*) n); }
     
     wxSVGElement* GetElementById(const wxString& id);
