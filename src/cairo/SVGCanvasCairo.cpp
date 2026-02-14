@@ -579,7 +579,7 @@ void wxSVGCanvasCairo::SetClipPath(const wxCSSPrimitiveValue& clipPath, wxSVGMat
 		return;
 	wxString clipPathId = clipPath.GetStringValue().substr(1);
 	wxSVGClipPathElement* clipPathElem = (wxSVGClipPathElement*) svgElem.GetElementById(clipPathId);
-	if (!clipPathElem && clipPathElem->GetDtd() != wxSVG_CLIPPATH_ELEMENT)
+	if (!clipPathElem || clipPathElem->GetDtd() != wxSVG_CLIPPATH_ELEMENT)
 		return;
 	clipPathElem->SetOwnerSVGElement(&svgElem);
 	clipPathElem->SetViewportElement(&svgElem);
@@ -590,8 +590,15 @@ void wxSVGCanvasCairo::SetClipPath(const wxCSSPrimitiveValue& clipPath, wxSVGMat
 
 void wxSVGCanvasCairo::SetClipPath(wxSVGElement* clipPathElem, wxSVGMatrix matrix) {
 	SetMatrix(m_cr, matrix);
-	wxSVGElement* elem = (wxSVGElement*) (clipPathElem->GetFirstChild());
-	while (elem != NULL) {
+	wxSvgXmlNode* xmlnode = clipPathElem->GetFirstChild();
+	while (xmlnode != NULL) {
+		if (xmlnode->GetType() != wxSVGXML_ELEMENT_NODE)
+		{
+			xmlnode = xmlnode->GetNextSibling();
+			continue;
+		}
+
+		wxSVGElement* elem = (wxSVGElement*)xmlnode;
 		elem->SetOwnerSVGElement(clipPathElem->GetOwnerSVGElement());
 		elem->SetViewportElement(clipPathElem->GetViewportElement());
 		wxSVGDocument* doc = (wxSVGDocument*) elem->GetOwnerDocument();
@@ -640,7 +647,7 @@ void wxSVGCanvasCairo::SetClipPath(wxSVGElement* clipPathElem, wxSVGMatrix matri
 			//cairo_path_destroy(path);
 			delete canvasItem;
 		}
-		elem = (wxSVGElement*) elem->GetNextSibling();
+		xmlnode = xmlnode->GetNextSibling();
 	}
 }
 
