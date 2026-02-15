@@ -47,6 +47,7 @@ wxString s_cssPropertyStrings[] =
   wxT("marker-mid"),
   wxT("marker-start"),
   wxT("mask"),
+  wxT("mix-blend-mode"),
   wxT("opacity"),
   wxT("overflow"),
   wxT("pointer-events"),

@@ -231,6 +231,7 @@ void wxCSSStyleDeclaration::SetProperty(wxCSS_PROPERTY propertyId, const wxStrin
 		break;
 		// string
 	case wxCSS_PROPERTY_FONT_FAMILY:
+	case wxCSS_PROPERTY_MIX_BLEND_MODE:
 		if (!cssValue)
 			cssValue = new wxCSSPrimitiveValue;
 		((wxCSSPrimitiveValue*) cssValue)->SetStringValue(wxCSS_STRING, value);
