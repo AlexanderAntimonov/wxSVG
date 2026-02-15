@@ -46,7 +46,7 @@ wxSvgXmlNode::wxSvgXmlNode(wxSvgXmlNode *parent,wxSvgXmlNodeType type,
                      wxSvgXmlProperty *props, wxSvgXmlNode *next)
     : m_type(type), m_name(name), m_content(content),
       m_properties(props), m_parent(parent),
-      m_children(NULL), m_next(next), m_ownerDocument(NULL)
+      m_children(NULL), m_next(next), m_last(NULL), m_ownerDocument(NULL)
 {
     if (m_parent)
     {
@@ -64,13 +64,14 @@ wxSvgXmlNode::wxSvgXmlNode(wxSvgXmlNodeType type, const wxString& name,
                      const wxString& content)
     : m_type(type), m_name(name), m_content(content),
       m_properties(NULL), m_parent(NULL),
-      m_children(NULL), m_next(NULL), m_ownerDocument(NULL)
+      m_children(NULL), m_next(NULL), m_last(NULL), m_ownerDocument(NULL)
 {}
 
 wxSvgXmlNode::wxSvgXmlNode(const wxSvgXmlNode& node)
 {
     m_next = NULL;
     m_parent = NULL;
+    m_last = NULL;
     DoCopy(node);
 }
 
@@ -176,6 +177,8 @@ void wxSvgXmlNode::AddChild(wxSvgXmlNode *child)
 {
     if (m_children == NULL)
         m_children = child;
+    if (m_last)
+        m_last->m_next = child;
     else
     {
         wxSvgXmlNode *ch = m_children;
@@ -183,8 +186,11 @@ void wxSvgXmlNode::AddChild(wxSvgXmlNode *child)
         ch->m_next = child;
     }
     child->m_next = NULL;
+    child->m_last = NULL;
     child->m_parent = this;
     child->SetOwnerDocument(m_ownerDocument);
+
+    m_last = child;
 }
 
 void wxSvgXmlNode::InsertChild(wxSvgXmlNode *child, wxSvgXmlNode *before_node)
@@ -237,12 +243,17 @@ bool wxSvgXmlNode::RemoveChild(wxSvgXmlNode *child)
 
 wxSvgXmlNode* wxSvgXmlNode::GetLastChild() const
 {
+    if (m_last)
+        return m_last;
+
     wxSvgXmlNode* child = m_children;
     if (child)
     {
         while (child->m_next)
             child = child->m_next;
     }
+
+    const_cast<wxSvgXmlNode*>(this)->m_last = child;
     return child;
 }
 

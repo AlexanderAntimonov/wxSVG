@@ -117,7 +117,7 @@ class wxSvgXmlNode
 {
 public:
     wxSvgXmlNode() : m_type(wxSVGXML_ELEMENT_NODE), m_properties(NULL), m_parent(NULL),
-                  m_children(NULL), m_next(NULL), m_ownerDocument(NULL) {}
+                  m_children(NULL), m_next(NULL), m_last(NULL), m_ownerDocument(NULL) {}
     wxSvgXmlNode(wxSvgXmlNode* parent, wxSvgXmlNodeType type,
               const wxString& name, const wxString& content,
               wxSvgXmlProperty* props, wxSvgXmlNode *next);
@@ -208,7 +208,7 @@ private:
     wxString m_name;
     wxString m_content;
     wxSvgXmlProperty *m_properties;
-    wxSvgXmlNode *m_parent, *m_children, *m_next;
+    wxSvgXmlNode *m_parent, *m_children, *m_next, *m_last;
     wxSvgXmlDocument *m_ownerDocument;
 
     void DoCopy(const wxSvgXmlNode& node);
