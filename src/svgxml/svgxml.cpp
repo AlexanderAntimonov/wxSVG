@@ -516,6 +516,9 @@ static void StartElementHnd(void *userData, const char *name, const char **atts)
 {
     wxSvgXmlParsingContext *ctx = (wxSvgXmlParsingContext*)userData;
 	wxSvgXmlElement* node = ctx->doc->CreateElement(CharToString(ctx->conv, name));
+	if (!node)
+        return;
+
     const char **a = atts;
     while (*a)
     {
@@ -524,7 +527,7 @@ static void StartElementHnd(void *userData, const char *name, const char **atts)
     }
     if (ctx->root == NULL)
         ctx->root = node;
-    else
+    else if (ctx->node)
         ctx->node->AddChild(node);
     ctx->node = node;
     ctx->lastAsText = NULL;
@@ -534,7 +537,8 @@ static void EndElementHnd(void *userData, const char* WXUNUSED(name))
 {
     wxSvgXmlParsingContext *ctx = (wxSvgXmlParsingContext*)userData;
 
-    ctx->node = ctx->node->GetParent();
+    if (ctx->node)
+        ctx->node = ctx->node->GetParent();
     ctx->lastAsText = NULL;
 }
 
@@ -551,7 +555,7 @@ static void TextHnd(void *userData, const char *s, int len)
         ctx->lastAsText->SetContent(ctx->lastAsText->GetContent() +
                                     CharToString(ctx->conv, buf));
     }
-    else
+    else if (ctx->node)
     {
         bool whiteOnly = TRUE;
         for (char *c = buf; *c != '\0'; c++)

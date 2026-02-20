@@ -78,7 +78,7 @@ class wxSVGDocument:
     
     wxSVGSVGElement* GetRootElement() {
         wxSvgXmlNode* node = GetRoot();
-        if (node->GetType() == wxSVGXML_ELEMENT_NODE)
+        if (node && node->GetType() == wxSVGXML_ELEMENT_NODE)
         {
             wxSVGElement* root = (wxSVGElement*) node;
             return root && root->GetDtd() == wxSVG_SVG_ELEMENT ? (wxSVGSVGElement*) root : nullptr;
