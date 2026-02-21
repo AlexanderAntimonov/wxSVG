@@ -121,16 +121,28 @@ void wxSVGTransform::SetValueAsString(const wxString& value) {
 	}
 	if (pi == 0)
 		return;
-	if (value.substr(0, 9) == wxT("translate"))
+
+	size_t start = 0;
+	wxString transform = value.BeforeFirst(wxT('('));
+	wxString delimiters = wxT(", ");
+	for (size_t i = 0; i < transform.size(); ++i)
+	{
+		if (delimiters.find(transform[i]) != wxString::npos)
+			++start;
+		else
+			break;
+	}
+
+	if (value.substr(start, 9) == wxT("translate"))
 		SetTranslate(params[0], params[1]);
-	else if (value.substr(0, 5) == wxT("scale"))
+	else if (value.substr(start, 5) == wxT("scale"))
 		SetScale(params[0], pi == 1 ? params[0] : params[1]);
-	else if (value.substr(0, 6) == wxT("rotate"))
+	else if (value.substr(start, 6) == wxT("rotate"))
 		SetRotate(params[0], params[1], params[2]);
-	else if (value.substr(0, 5) == wxT("skewX"))
+	else if (value.substr(start, 5) == wxT("skewX"))
 		SetSkewX(params[0]);
-	else if (value.substr(0, 5) == wxT("skewY"))
+	else if (value.substr(start, 5) == wxT("skewY"))
 		SetSkewY(params[0]);
-	else if (value.substr(0, 6) == wxT("matrix"))
+	else if (value.substr(start, 6) == wxT("matrix"))
 		SetMatrix(wxSVGMatrix(params[0], params[1], params[2], params[3], params[4], params[5]));
 }
