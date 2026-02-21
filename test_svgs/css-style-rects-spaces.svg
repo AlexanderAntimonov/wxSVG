@@ -1,0 +1,23 @@
+<svg id="Layer_1" data-name="Layer 1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 639.75 423.64">
+  <defs>
+    <style>
+      .cls-1 {
+        fill: #999;
+      }
+
+      .cls-1, .cls-2 {
+        stroke: #4fa0ca;
+        stroke-miterlimit: 10;
+        stroke-width: 27px;
+      }
+
+      .cls-2 {
+        fill: #beac83;
+      }
+    </style>
+  </defs>
+  <title>css-style-rects-exported-2</title>
+  <rect class="cls-1" x="13.5" y="13.5" width="259.73" height="159.06"/>
+  <rect class="cls-1" x="124.91" y="127.59" width="259.73" height="159.06"/>
+  <polygon class="cls-2" points="626.25 410.14 366.52 410.14 439 304.1 626.25 251.08 626.25 410.14"/>
+</svg>

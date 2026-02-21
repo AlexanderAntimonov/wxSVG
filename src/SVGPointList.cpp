@@ -25,13 +25,31 @@ wxString wxSVGPointList::GetValueAsString() const {
 void wxSVGPointList::SetValueAsString(const wxString& value) {
 	Clear();
 	double x, y;
+	bool isLast = false; // false => y, true => x
 	wxStringTokenizer tkz(value, wxT(" \t\r\n"));
 	while (tkz.HasMoreTokens()) {
 		wxString token = tkz.GetNextToken().Strip(wxString::both);
-		if (token.length() && token.Find(wxT(',')) > 0
-				&& token.BeforeFirst(wxT(',')).ToDouble(&x)
-				&& token.AfterFirst(wxT(',')).ToDouble(&y)) {
+		if (token.length() && token.Find(wxT(',')) > 0)
+		{
+			token.BeforeFirst(wxT(',')).ToCDouble(&x);
+			token.AfterFirst(wxT(',')).ToCDouble(&y);
 			Add(wxSVGPoint(x, y));
+			isLast = false;
+		}
+		else if (token.length())
+		{
+			if (isLast)
+			{
+				token.ToCDouble(&y);
+				Last().SetY(y);
+				isLast = false;
+			}
+			else
+			{
+				token.ToCDouble(&x);
+				Add(wxSVGPoint(x, 0));
+				isLast = true;
+			}
 		}
 	}
 }
