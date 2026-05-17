@@ -18,6 +18,7 @@
 #define WX_SVG_CANVAS wxSVGCanvasCairo
 #endif
 
+#include <wx/tokenzr.h>
 #include <wx/log.h>
 
 IMPLEMENT_ABSTRACT_CLASS(wxSVGDocument, wxSvgXmlDocument)
@@ -151,6 +152,37 @@ void wxSVGDocument::ApplyAnimation(wxSVGElement* parent, wxSVGSVGElement* ownerS
 					ApplyAnimation(svgImage, svgImage);
 				}
 			}
+			else if (elem->GetDtd() == wxSVG_STYLE_ELEMENT) {
+				wxSVGStyleElement* styleElem = (wxSVGStyleElement*)elem;
+				ownerSVGElement->ParseStyleElementContent(*styleElem);
+			}
+
+			wxSVGStylable* stylable = wxSVGStylable::GetSVGStylable(*elem);
+			if (stylable)
+			{
+				wxCSSStyleDeclaration mergedStyle;
+				if (auto cssStyle = ownerSVGElement->GetCssStyleByType(elem->GetName()))
+					mergedStyle.Add(*cssStyle);
+
+				wxString cssClassStr = elem->GetAttribute("class");
+				if (!cssClassStr.IsEmpty())
+				{
+					wxArrayString classNames = wxStringTokenize(cssClassStr, wxT(" "));
+					for (const wxString& className : classNames)
+					{
+						auto cssStyle = ownerSVGElement->GetCssStyleByClass(className);
+						if (cssStyle)
+							mergedStyle.Add(*cssStyle);
+					}
+				}
+
+				if (auto cssStyle = ownerSVGElement->GetCssStyleById(elem->GetId()))
+					mergedStyle.Add(*cssStyle);
+
+				mergedStyle.Add(stylable->GetStyle());
+				stylable->SetStyle(mergedStyle);
+			}
+
 			switch (elem->GetDtd()) {
 				case wxSVG_ANIMATE_ELEMENT:
 					((wxSVGAnimateElement*) elem)->SetOwnerSVGElement(ownerSVGElement);

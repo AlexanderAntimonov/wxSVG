@@ -35,6 +35,12 @@
 #include "Element.h"
 #include "SVGAnimatedType.h"
 
+#include <memory>
+
+typedef std::shared_ptr<const wxCSSStyleDeclaration> wxCSSStyleDeclarationCPtr;
+
+class wxSVGStyleElement;
+
 class wxSVGSVGElement:
   public wxSVGElement,
   public wxSVGTests,
@@ -49,6 +55,9 @@ class wxSVGSVGElement:
   public wxViewCSS,
   public wxDocumentCSS
 {
+    struct wxSVGSVGElementPrivate;
+    std::shared_ptr<wxSVGSVGElementPrivate> m_this;
+
   protected:
     wxSVGAnimatedLength m_x;
     wxSVGAnimatedLength m_y;
@@ -116,9 +125,13 @@ class wxSVGSVGElement:
     inline const wxSVGPoint& GetCurrentTranslate() const { return m_currentTranslate; }
     inline void SetCurrentTranslate(const wxSVGPoint& n) { m_currentTranslate = n; }
 
+    void ParseStyleElementContent(const wxSVGStyleElement& styleElem);
+    wxCSSStyleDeclarationCPtr GetCssStyleByClass(const wxString& className);
+    wxCSSStyleDeclarationCPtr GetCssStyleById(const wxString& id);
+    wxCSSStyleDeclarationCPtr GetCssStyleByType(const wxString& type);
+
   public:
-    wxSVGSVGElement(wxString tagName = wxT("svg")):
-      wxSVGElement(tagName), m_pixelUnitToMillimeterX(0), m_pixelUnitToMillimeterY(0), m_screenPixelToMillimeterX(0), m_screenPixelToMillimeterY(0), m_useCurrentView(0), m_currentScale(0) {}
+    wxSVGSVGElement(wxString tagName = wxT("svg"));
     virtual ~wxSVGSVGElement() {}
     wxSvgXmlNode* CloneNode(bool deep = true) { return new wxSVGSVGElement(*this); }
     wxSVGRect GetBBox(wxSVG_COORDINATES coordinates = wxSVG_COORDINATES_USER) { return wxSVGLocatable::GetChildrenBBox(this, coordinates); }

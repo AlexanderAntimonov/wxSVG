@@ -47,6 +47,7 @@ void wxSVGCanvasPath::Init(wxSVGLineElement& element) {
 
 void wxSVGCanvasPath::Init(wxSVGPolylineElement& element) {
 	m_element = &element;
+	SetFill(false);
 
 	const wxSVGPointList& points = element.GetPoints();
 	if (points.Count())
@@ -1405,7 +1406,7 @@ void wxSVGCanvasImage::Init(wxSVGImageElement& element, const wxCSSStyleDeclarat
 				return;
 			} else
 				wxLogError(wxT("Unknown image data: ") + data.substr(0, 6));
-		} if (filename.StartsWith(wxT("concat:"))) {
+		} else if (filename.StartsWith(wxT("concat:"))) {
 			if (filename.Find(wxT('#')) != wxNOT_FOUND && filename.AfterLast(wxT('#')).ToLong(&pos))
 				filename = filename.BeforeLast(wxT('#'));
 		} else {

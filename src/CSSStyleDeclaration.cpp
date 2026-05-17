@@ -374,7 +374,7 @@ wxRGBColor wxCSSStyleDeclaration::ParseColor(const wxString& value) {
 	} else if (value.Left(4) == wxT("rgba")) {
 		wxStringTokenizer tkz(value.Mid(4), wxT(",()"));
 		long rgb[3] = { 0, 0, 0 };
-		double a;
+		double a = 1;
 		for (int i = 0; tkz.HasMoreTokens() && i < 4;) {
 			wxString token = tkz.GetNextToken().Strip(wxString::both);
 			if (token.length()) {
@@ -396,7 +396,7 @@ wxRGBColor wxCSSStyleDeclaration::ParseColor(const wxString& value) {
 			return wxRGBColor(rgb[0], rgb[1], rgb[2]);
 	} else {
 		FillCSSColors();
-		int num = s_cssColors->Index(value);
+		int num = s_cssColors->Index(value.Lower());
 		if (num >= 0)
 			return s_cssNamedColors[num].colour;
 	}
