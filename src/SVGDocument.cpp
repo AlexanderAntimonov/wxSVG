@@ -21,6 +21,10 @@
 #include <wx/tokenzr.h>
 #include <wx/log.h>
 
+namespace {
+void ApplyCSS(wxSVGElement* parent, wxSVGSVGElement* ownerSVGElement);
+}
+
 IMPLEMENT_ABSTRACT_CLASS(wxSVGDocument, wxSvgXmlDocument)
 
 wxSVGDocument::wxSVGDocument(const wxSVGDocument& doc): wxSvgXmlDocument(doc) {
@@ -36,6 +40,10 @@ bool wxSVGDocument::Load(const wxString& filename, const wxString& encoding) {
 	if (result) {
 		m_path =  wxPathOnly(filename);
 	}
+
+	if (auto root = GetRootElement())
+		ApplyCSS(root, root);
+
 	SetCurrentTime(0);
 	return result;
 }
@@ -141,6 +149,78 @@ double wxSVGDocument::GetDuration() {
 	return GetDuration(GetRootElement());
 }
 
+namespace {
+
+void ApplyCSS(wxSVGElement* parent, wxSVGSVGElement* ownerSVGElement)
+{
+    if (!parent)
+        return;
+
+    for (wxSvgXmlNode* xmlNode = parent->GetChildren(); xmlNode; xmlNode = xmlNode->GetNext())
+    {
+        if (xmlNode->GetType() != wxSVGXML_ELEMENT_NODE)
+            continue;
+
+        auto* elem = (wxSVGElement*)xmlNode;
+        const auto dtd = elem->GetDtd();
+
+        if (dtd == wxSVG_IMAGE_ELEMENT)
+        {
+            auto* imageElem = (wxSVGImageElement*)elem;
+            auto* canvasItem = (wxSVGCanvasImage*) imageElem->GetCanvasItem();
+            if (canvasItem && canvasItem->GetSvgImage())
+            {
+                auto* owner = (wxSVGDocument*)elem->GetOwnerDocument();
+                wxSVGSVGElement* svgImage = canvasItem->GetSvgImage(owner);
+                ApplyCSS(svgImage, svgImage);
+            }
+        }
+        else if (dtd == wxSVG_STYLE_ELEMENT && ownerSVGElement)
+        {
+            auto* styleElem = (wxSVGStyleElement*)elem;
+            ownerSVGElement->ParseStyleElementContent(*styleElem);
+        }
+
+        wxSVGStylable* stylable = wxSVGStylable::GetSVGStylable(*elem);
+        if (stylable && ownerSVGElement)
+        {
+            wxCSSStyleDeclaration mergedStyle;
+            if (auto cssStyle = ownerSVGElement->GetCssStyleByType(elem->GetName()))
+                mergedStyle.Add(*cssStyle);
+
+            wxString cssClassStr = elem->GetAttribute("class");
+            if (!cssClassStr.IsEmpty())
+            {
+                wxArrayString classNames = wxStringTokenize(cssClassStr, wxT(" "));
+                for (const wxString& className : classNames)
+                {
+                    auto cssStyle = ownerSVGElement->GetCssStyleByClass(className);
+                    if (cssStyle)
+                        mergedStyle.Add(*cssStyle);
+                }
+            }
+
+            if (auto cssStyle = ownerSVGElement->GetCssStyleById(elem->GetId()))
+                mergedStyle.Add(*cssStyle);
+
+            mergedStyle.Add(stylable->GetStyle());
+            stylable->SetStyle(mergedStyle);
+        }
+
+        switch (dtd)
+        {
+        case wxSVG_SVG_ELEMENT:
+            ApplyCSS(elem, (wxSVGSVGElement*) elem);
+            break;
+        default:
+            ApplyCSS(elem, ownerSVGElement);
+            break;
+        }
+    }
+}
+
+} // namespace
+
 void wxSVGDocument::ApplyAnimation(wxSVGElement* parent, wxSVGSVGElement* ownerSVGElement) {
 	wxSVGElement* elem = (wxSVGElement*) parent->GetChildren();
 	while (elem) {
@@ -152,37 +232,6 @@ void wxSVGDocument::ApplyAnimation(wxSVGElement* parent, wxSVGSVGElement* ownerS
 					ApplyAnimation(svgImage, svgImage);
 				}
 			}
-			else if (elem->GetDtd() == wxSVG_STYLE_ELEMENT) {
-				wxSVGStyleElement* styleElem = (wxSVGStyleElement*)elem;
-				ownerSVGElement->ParseStyleElementContent(*styleElem);
-			}
-
-			wxSVGStylable* stylable = wxSVGStylable::GetSVGStylable(*elem);
-			if (stylable)
-			{
-				wxCSSStyleDeclaration mergedStyle;
-				if (auto cssStyle = ownerSVGElement->GetCssStyleByType(elem->GetName()))
-					mergedStyle.Add(*cssStyle);
-
-				wxString cssClassStr = elem->GetAttribute("class");
-				if (!cssClassStr.IsEmpty())
-				{
-					wxArrayString classNames = wxStringTokenize(cssClassStr, wxT(" "));
-					for (const wxString& className : classNames)
-					{
-						auto cssStyle = ownerSVGElement->GetCssStyleByClass(className);
-						if (cssStyle)
-							mergedStyle.Add(*cssStyle);
-					}
-				}
-
-				if (auto cssStyle = ownerSVGElement->GetCssStyleById(elem->GetId()))
-					mergedStyle.Add(*cssStyle);
-
-				mergedStyle.Add(stylable->GetStyle());
-				stylable->SetStyle(mergedStyle);
-			}
-
 			switch (elem->GetDtd()) {
 				case wxSVG_ANIMATE_ELEMENT:
 					((wxSVGAnimateElement*) elem)->SetOwnerSVGElement(ownerSVGElement);
