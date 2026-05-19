@@ -503,26 +503,52 @@ inline static wxString CharToString(wxMBConv *conv,
 
 struct wxSvgXmlParsingContext
 {
-	wxSvgXmlDocument* doc;
-    wxMBConv  *conv;
-    wxSvgXmlNode *root;
-    wxSvgXmlNode *node;
-    wxSvgXmlNode *lastAsText;
+    wxSvgXmlDocument* doc = nullptr;
+    wxMBConv     *conv = nullptr;
+    wxSvgXmlNode *root = nullptr;
+    wxSvgXmlNode *node = nullptr;
+    wxSvgXmlNode *lastAsText = nullptr;
     wxString   encoding;
     wxString   version;
+
+    int nodeLevel = 0;
+    int svgNodeLevel = 0;
 };
+
+static const wxString gSvgNamespace = wxT("http://www.w3.org/2000/svg");
 
 static void StartElementHnd(void *userData, const char *name, const char **atts)
 {
-    wxSvgXmlParsingContext *ctx = (wxSvgXmlParsingContext*)userData;
-	wxSvgXmlElement* node = ctx->doc->CreateElement(CharToString(ctx->conv, name));
+    auto *ctx = (wxSvgXmlParsingContext*)userData;
+    ctx->nodeLevel += 1;
+
+    wxString wxname = CharToString(ctx->conv, name);
+    const int index = wxname.Find('|', true);
+
+    wxSvgXmlElement* node = nullptr;
+    if (index >= 0)
+    {
+        if (wxname.StartsWith(gSvgNamespace))
+        {
+            wxString elemName = wxname.Mid(index+1);
+            node = ctx->doc->CreateElement(wxname.Mid(index+1));
+        }
+    }
+    else
+        node = ctx->doc->CreateElement(wxname);
+
 	if (!node)
         return;
 
     const char **a = atts;
     while (*a)
     {
-        node->AddProperty(CharToString(ctx->conv, a[0]), CharToString(ctx->conv, a[1]));
+        wxString attrName = CharToString(ctx->conv, a[0]);
+        const int index = attrName.Find('|', true);
+        if (index >= 0)
+            attrName = attrName.Mid(index+1);
+
+        node->AddProperty(attrName, CharToString(ctx->conv, a[1]));
         a += 2;
     }
     if (ctx->root == NULL)
@@ -531,15 +557,24 @@ static void StartElementHnd(void *userData, const char *name, const char **atts)
         ctx->node->AddChild(node);
     ctx->node = node;
     ctx->lastAsText = NULL;
+
+    ctx->svgNodeLevel += 1;
 }
 
 static void EndElementHnd(void *userData, const char* WXUNUSED(name))
 {
     wxSvgXmlParsingContext *ctx = (wxSvgXmlParsingContext*)userData;
 
-    if (ctx->node)
+    if (ctx->svgNodeLevel == ctx->nodeLevel && ctx->node)
+    {
+        if (ctx->svgNodeLevel > 0)
+            ctx->svgNodeLevel -= 1;
         ctx->node = ctx->node->GetParent();
+    }
+
     ctx->lastAsText = NULL;
+    if (ctx->nodeLevel > 0)
+        ctx->nodeLevel -= 1;
 }
 
 static void TextHnd(void *userData, const char *s, int len)
@@ -652,7 +687,7 @@ bool wxSvgXmlDocument::Load(wxInputStream& stream, const wxString& encoding)
     char buf[BUFSIZE];
     wxSvgXmlParsingContext ctx;
     bool done;
-    XML_Parser parser = XML_ParserCreate(NULL);
+    XML_Parser parser = XML_ParserCreateNS(NULL, '|');
 
 	ctx.doc = this;
     ctx.root = ctx.node = NULL;
