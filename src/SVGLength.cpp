@@ -91,13 +91,21 @@ void wxSVGLength::SetValueInSpecifiedUnits(double n) {
 		case wxSVG_LENGTHTYPE_UNKNOWN: break;
 		case wxSVG_LENGTHTYPE_NUMBER: break;
 		case wxSVG_LENGTHTYPE_PX: break;
-		case wxSVG_LENGTHTYPE_PERCENTAGE: break; // todo
+		case wxSVG_LENGTHTYPE_PERCENTAGE: m_value *= 0.01; break;
 		case wxSVG_LENGTHTYPE_EMS: break; // todo
 		case wxSVG_LENGTHTYPE_EXS: break; // todo
+#if 0 // TODO: configurable define
 		case wxSVG_LENGTHTYPE_CM: m_value *= 35.43307; break;
 		case wxSVG_LENGTHTYPE_MM: m_value *= 3.543307; break;
 		case wxSVG_LENGTHTYPE_IN: m_value *= 90; break;
 		case wxSVG_LENGTHTYPE_PT: m_value = m_value * 96 / 72; break;
 		case wxSVG_LENGTHTYPE_PC: m_value *= 15; break;
+#else // 1px = 1pt = 1/72in (as in PostScript or PDF) for simple conversion between formats
+		case wxSVG_LENGTHTYPE_CM: m_value *= 72. / 25.4 * 10; break;
+		case wxSVG_LENGTHTYPE_MM: m_value *= 72. / 25.4; break;
+		case wxSVG_LENGTHTYPE_IN: m_value *= 72; break;
+		case wxSVG_LENGTHTYPE_PT: break;
+		case wxSVG_LENGTHTYPE_PC: m_value *= 12; break;
+#endif
 	}
 }
