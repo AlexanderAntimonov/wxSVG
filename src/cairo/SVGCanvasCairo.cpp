@@ -419,23 +419,27 @@ void wxSVGCanvasCairo::DrawPath(cairo_t* cr, wxSVGCanvasPathCairo& canvasPath, c
 	
 	// Filling
 	if (canvasPath.GetFill() && style.GetFill().Ok() && style.GetFill().GetPaintType() != wxSVG_PAINTTYPE_NONE) {
+        cairo_save(cr);
 		cairo_path_t* path = canvasPath.GetPath();
 		cairo_append_path(cr, path);
 		SetPaint(cr, style.GetFill(), style.GetOpacity()*style.GetFillOpacity(), canvasPath, svgElem, matrix);
 		cairo_set_fill_rule(cr, style.GetFillRule() == wxCSS_VALUE_EVENODD ? CAIRO_FILL_RULE_EVEN_ODD : CAIRO_FILL_RULE_WINDING);
 		cairo_fill(cr);
 		cairo_path_destroy(path);
+        cairo_restore(cr);
 	}
 	
 	// Stroking
 	if (style.GetStroke().Ok() && style.GetStrokeWidth() > 0
 			&& style.GetStroke().GetPaintType() != wxSVG_PAINTTYPE_NONE) {
+        cairo_save(cr);
 		cairo_path_t* path = canvasPath.GetPath();
 		cairo_append_path(cr, path);
 		SetPaint(cr, style.GetStroke(), style.GetOpacity()*style.GetStrokeOpacity(), canvasPath, svgElem, matrix);
 		wxSVGCanvasPathCairo::ApplyStrokeStyle(cr, style);
 		cairo_stroke(cr);
 		cairo_path_destroy(path);
+        cairo_restore(cr);
 	}
 	
 	// marker
