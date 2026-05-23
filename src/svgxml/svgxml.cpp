@@ -714,9 +714,9 @@ bool wxSvgXmlDocument::Load(wxInputStream& stream, const wxString& encoding)
         {
             wxString error(XML_ErrorString(XML_GetErrorCode(parser)),
                            *wxConvCurrent);
-            wxLogError(_("XML parsing error: '%s' at line %d"),
+            wxLogError(_("XML parsing error: '%s' at line %ull"),
                        error.c_str(),
-                       XML_GetCurrentLineNumber(parser));
+                       (unsigned long long)XML_GetCurrentLineNumber(parser));
             ok = false;
             break;
         }
