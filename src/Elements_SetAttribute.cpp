@@ -259,7 +259,10 @@ bool wxSVGAnimateTransformElement::SetAttribute(const wxString& attrName, const 
 // wxSVGAnimatedPathData
 bool wxSVGAnimatedPathData::SetAttribute(const wxString& attrName, const wxString& attrValue) {
   if (attrName == wxT("d"))
+  {
+    m_pathSegList.Clear();
     m_pathSegList.SetValueAsString(attrValue);
+  }
   else 
       return false;
 
@@ -390,7 +393,11 @@ bool wxSVGClipPathElement::SetAttribute(const wxString& attrName, const wxString
   if (attrName == wxT("clipPathUnits"))
   {
     long value;
-    if (attrValue.ToLong(&value))
+    if (attrValue == wxT("userSpaceOnUse"))
+        m_clipPathUnits.SetBaseVal(wxSVG_UNIT_TYPE_USERSPACEONUSE);
+    else if (attrValue == wxT("objectBoundingBox"))
+        m_clipPathUnits.SetBaseVal(wxSVG_UNIT_TYPE_OBJECTBOUNDINGBOX);
+    else if (attrValue.ToLong(&value))
       m_clipPathUnits.SetBaseVal((unsigned char) value);
   }
   else if (wxSVGElement::SetAttribute(attrName, attrValue));

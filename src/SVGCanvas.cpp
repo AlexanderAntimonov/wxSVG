@@ -214,8 +214,19 @@ void wxSVGCanvas::GetLinearGradientVector(wxSVGPoint& p1, wxSVGPoint& p2, const 
 		wxSVGCanvasPath& path) {
     p1.SetX(gradElem.GetX1().GetAnimVal());
 	p1.SetY(gradElem.GetY1().GetAnimVal());
-	p2.SetX(gradElem.GetX2().GetAnimVal());
-	p2.SetY(gradElem.GetY2().GetAnimVal());
+
+    wxSVGAnimatedLength x2 = gradElem.GetX2();
+    if (x2.GetAnimVal().GetUnitType() == wxSVG_LENGTHTYPE_UNKNOWN)
+    {
+        x2 = wxSVGLength(wxSVG_LENGTHTYPE_PERCENTAGE, 100);
+        p2.SetX(x2.GetBaseVal().GetValue());
+        p2.SetY(gradElem.GetY2().GetBaseVal().GetValue());
+    }
+    else
+    {
+        p2.SetX(gradElem.GetX2().GetAnimVal());
+        p2.SetY(gradElem.GetY2().GetAnimVal());
+    }
     
     if (gradElem.GetGradientUnits().GetAnimVal() == wxSVG_UNIT_TYPE_UNKNOWN ||
         gradElem.GetGradientUnits().GetAnimVal() == wxSVG_UNIT_TYPE_OBJECTBOUNDINGBOX)
@@ -323,6 +334,13 @@ void wxSVGCanvas::RenderElement(wxSVGElement* elem, const wxSVGRect* rect, const
 			((wxSVGAnimatedLength&) element->GetWidth()).SetAnimVal( wxSVGLength(wxSVG_LENGTHTYPE_PERCENTAGE, 100));
 		if (element->GetHeight().GetAnimVal().GetUnitType() == wxSVG_LENGTHTYPE_UNKNOWN)
 			((wxSVGAnimatedLength&) element->GetHeight()).SetAnimVal( wxSVGLength(wxSVG_LENGTHTYPE_PERCENTAGE, 100));
+
+        double x = element->GetX().GetAnimVal();
+        double y = element->GetY().GetAnimVal();
+
+        wxSVGMatrix viewPortMatrix(1, 0, 0, 1, x, y);
+        matrix = matrix.Multiply(viewPortMatrix);
+
 		element->UpdateMatrix(matrix);
 		style.Add(element->GetStyle());
 		style.Add(element->GetAnimStyle());

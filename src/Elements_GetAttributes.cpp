@@ -721,8 +721,13 @@ wxSvgXmlAttrHash wxSVGFETurbulenceElement::GetAttributes() const
 wxSvgXmlAttrHash wxSVGFilterElement::GetAttributes() const
 {
   wxSvgXmlAttrHash attrs;
-  if (m_filterUnits.GetBaseVal() != 0)
+  if (m_filterUnits.GetBaseVal() == wxSVG_UNIT_TYPE_OBJECTBOUNDINGBOX)
+    attrs.Add(wxT("filterUnits"), wxT("objectBoundingBox"));
+  else if (m_filterUnits.GetBaseVal() == wxSVG_UNIT_TYPE_USERSPACEONUSE)
+    attrs.Add(wxT("filterUnits"), wxT("userSpaceOnUse"));
+  else if (m_filterUnits.GetBaseVal() != 0)
     attrs.Add(wxT("filterUnits"), wxString::Format(wxT("%d"), (char) m_filterUnits.GetBaseVal()));
+
   if (m_primitiveUnits.GetBaseVal() != 0)
     attrs.Add(wxT("primitiveUnits"), wxString::Format(wxT("%d"), (char) m_primitiveUnits.GetBaseVal()));
   if (m_x.GetBaseVal().GetUnitType() != wxSVG_LENGTHTYPE_UNKNOWN)
@@ -1017,11 +1022,21 @@ wxSvgXmlAttrHash wxSVGMarkerElement::GetAttributes() const
 // wxSVGMaskElement
 wxSvgXmlAttrHash wxSVGMaskElement::GetAttributes() const
 {
-  wxSvgXmlAttrHash attrs;
-  if (m_maskUnits.GetBaseVal() != 0)
-    attrs.Add(wxT("maskUnits"), wxString::Format(wxT("%d"), (char) m_maskUnits.GetBaseVal()));
-  if (m_maskContentUnits.GetBaseVal() != 0)
-    attrs.Add(wxT("maskContentUnits"), wxString::Format(wxT("%d"), (char) m_maskContentUnits.GetBaseVal()));
+    wxSvgXmlAttrHash attrs;
+    if (m_maskUnits.GetBaseVal() == wxSVG_UNIT_TYPE_OBJECTBOUNDINGBOX)
+        attrs.Add(wxT("maskUnits"), wxT("objectBoundingBox"));
+    else if (m_maskUnits.GetBaseVal() == wxSVG_UNIT_TYPE_USERSPACEONUSE)
+        attrs.Add(wxT("maskUnits"), wxT("userSpaceOnUse"));
+    else if (m_maskUnits.GetBaseVal() != 0)
+        attrs.Add(wxT("maskUnits"), wxString::Format(wxT("%d"), (char) m_maskUnits.GetBaseVal()));
+
+    if (m_maskContentUnits.GetBaseVal() == wxSVG_UNIT_TYPE_OBJECTBOUNDINGBOX)
+        attrs.Add(wxT("maskContentUnits"), wxT("objectBoundingBox"));
+    else if (m_maskContentUnits.GetBaseVal() == wxSVG_UNIT_TYPE_USERSPACEONUSE)
+        attrs.Add(wxT("maskContentUnits"), wxT("userSpaceOnUse"));
+    else if (m_maskContentUnits.GetBaseVal() != 0)
+        attrs.Add(wxT("maskContentUnits"), wxString::Format(wxT("%d"), (char) m_maskContentUnits.GetBaseVal()));
+
   if (m_x.GetBaseVal().GetUnitType() != wxSVG_LENGTHTYPE_UNKNOWN)
     attrs.Add(wxT("x"), m_x.GetBaseVal().GetValueAsString());
   if (m_y.GetBaseVal().GetUnitType() != wxSVG_LENGTHTYPE_UNKNOWN)
@@ -1193,6 +1208,8 @@ wxSvgXmlAttrHash wxSVGSVGElement::GetAttributes() const
   attrs.Add(wxSVGStylable::GetAttributes());
   attrs.Add(wxSVGFitToViewBox::GetAttributes());
   attrs.Add(wxSVGZoomAndPan::GetAttributes());
+  attrs.Add(wxSvgXmlNode::GetAttributes());
+
   return attrs;
 }
 
