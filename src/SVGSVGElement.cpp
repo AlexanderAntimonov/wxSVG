@@ -17,6 +17,22 @@
 #include <string>
 #include <regex>
 
+typedef std::unordered_map<wxString, std::shared_ptr<wxCSSStyleDeclaration>> CssStyleMap;
+typedef std::unordered_map<wxString, wxSVGElement*, wxStringHash> WxStringToElementMap;
+
+struct wxSVGSVGElement::wxSVGSVGElementPrivate
+{
+    CssStyleMap cssClasses, cssIds, cssElements;
+    WxStringToElementMap getElementByIdCache;
+    bool elementByIdWasCached = false;
+
+    void CacheElement(const wxString& elementId, wxSVGElement* element);
+    void CacheElementsIds(wxSVGElement* root);
+    wxSVGElement* GetElementByIdCached(const wxString& elementId, wxSVGElement* svg);
+    wxSVGElement* RecurseElementId(wxSVGElement* root, const wxString& elementId);
+};
+
+
 wxSVGSVGElement::wxSVGSVGElement(wxString tagName /* = wxT("svg") */)
     : wxSVGElement(tagName), m_pixelUnitToMillimeterX(0), m_pixelUnitToMillimeterY(0)
     , m_screenPixelToMillimeterX(0), m_screenPixelToMillimeterY(0), m_useCurrentView(0), m_currentScale(0)
@@ -133,16 +149,24 @@ wxSVGTransform wxSVGSVGElement::CreateSVGTransformFromMatrix(const wxSVGMatrix& 
 	return wxSVGTransform(matrix);
 }
 
-wxSVGElement* RecurseElementId(wxSVGElement* root, const wxString& elementId) {
+wxSVGElement*
+wxSVGSVGElement::wxSVGSVGElementPrivate::RecurseElementId(wxSVGElement* root, const wxString& elementId)
+{
 	if (root->GetId() == elementId)
+    {
+        CacheElement(elementId, root);
 		return root;
+    }
+
 	// check childs
 	wxSVGElement* child = (wxSVGElement*) root->GetChildren();
 	while (child) {
 		if (child->GetType() == wxSVGXML_ELEMENT_NODE) {
 			if (child->GetDtd() == wxSVG_SVG_ELEMENT) {
-				if (child->GetId() == elementId)
+				if (child->GetId() == elementId) {
+                    CacheElement(elementId, child);
 					return child;
+                }
 			} else {
 				wxSVGElement* res = RecurseElementId(child, elementId);
 				if (res)
@@ -154,16 +178,61 @@ wxSVGElement* RecurseElementId(wxSVGElement* root, const wxString& elementId) {
 	return NULL;
 }
 
-wxSvgXmlElement* wxSVGSVGElement::GetElementById(const wxString& elementId) const {
-	return RecurseElementId((wxSVGElement*) this, elementId);
+void wxSVGSVGElement::wxSVGSVGElementPrivate::CacheElementsIds(wxSVGElement* root)
+{
+    wxString elementId = root->GetId();
+    if (!elementId.empty())
+        CacheElement(elementId, root);
+
+    for (auto* child = (wxSVGElement*) root->GetChildren();
+         child;
+         child = (wxSVGElement*) child->GetNext())
+    {
+        if (child->GetType() != wxSVGXML_ELEMENT_NODE)
+            continue;
+        else if (child->GetDtd() == wxSVG_SVG_ELEMENT)
+        {
+            elementId = child->GetId();
+            if (!elementId.empty())
+                CacheElement(elementId, child);
+        }
+        else
+            CacheElementsIds(child);
+    }
 }
 
-typedef std::unordered_map<wxString, std::shared_ptr<wxCSSStyleDeclaration>> CssStyleMap;
-
-struct wxSVGSVGElement::wxSVGSVGElementPrivate
+void wxSVGSVGElement::wxSVGSVGElementPrivate::CacheElement(const wxString& elementId, wxSVGElement* element)
 {
-    CssStyleMap cssClasses, cssIds, cssElements;
-};
+    getElementByIdCache[elementId] = element;
+}
+
+wxSVGElement*
+wxSVGSVGElement::wxSVGSVGElementPrivate::GetElementByIdCached(const wxString& elementId, wxSVGElement* svg)
+{
+    if (!elementByIdWasCached)
+    {
+        CacheElementsIds(svg);
+        elementByIdWasCached = true;
+    }
+
+    auto it = getElementByIdCache.find(elementId);
+    if (it != getElementByIdCache.end())
+        return it->second;
+
+    return RecurseElementId(svg, elementId);
+}
+
+wxSvgXmlElement* wxSVGSVGElement::GetElementById(const wxString& elementId) const
+{
+    auto* element = (wxSVGElement*) m_this->GetElementByIdCached(elementId, (wxSVGElement*)this);
+    if (element)
+        return element;
+
+    auto* svg = GetOwnerSVGElement();
+    for (; svg; svg = svg->GetOwnerSVGElement());
+
+    return svg ? svg->GetElementById(elementId) : nullptr;
+}
 
 void wxSVGSVGElement::ParseStyleElementContent(const wxSVGStyleElement& styleElem)
 {
@@ -177,6 +246,8 @@ void wxSVGSVGElement::ParseStyleElementContent(const wxSVGStyleElement& styleEle
     {
         if (child->GetType() != wxSVGXML_TEXT_NODE)
             continue;
+
+        try {
 
         StringType content = (const wxStringCharType*)child->GetContent().data() ? : wxT("");
         StringRegexIt regexEnd, regexIt(content.cbegin(), content.cend(), regexExpr);
@@ -228,6 +299,8 @@ void wxSVGSVGElement::ParseStyleElementContent(const wxSVGStyleElement& styleEle
             try { ++regexIt; }
             catch(...) { break; }
         }
+
+        } catch(...){}
     }
 }
 

@@ -37,6 +37,8 @@ void wxSVGCanvasTextCairo::InitText(const wxString& text, const wxCSSStyleDeclar
 	
 #if defined(__WXMSW__) || defined(__WXMAC__)
 	int size = (int) style.GetFontSize();
+    if (size < 1)
+        size = 1;
 	wxFontStyle fstyle = style.GetFontStyle() == wxCSS_VALUE_ITALIC ? wxFONTSTYLE_ITALIC
 			: (style.GetFontStyle() == wxCSS_VALUE_OBLIQUE ? wxFONTSTYLE_SLANT : wxFONTSTYLE_NORMAL);
 	wxFontWeight weight = style.GetFontWeight() == wxCSS_VALUE_BOLD ? wxFONTWEIGHT_BOLD

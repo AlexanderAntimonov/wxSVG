@@ -203,8 +203,11 @@ void ApplyCSS(wxSVGElement* parent, wxSVGSVGElement* ownerSVGElement)
             if (auto cssStyle = ownerSVGElement->GetCssStyleById(elem->GetId()))
                 mergedStyle.Add(*cssStyle);
 
-            mergedStyle.Add(stylable->GetStyle());
-            stylable->SetStyle(mergedStyle);
+            if (!mergedStyle.empty())
+            {
+                mergedStyle.Add(stylable->GetStyle());
+                stylable->SetStyle(mergedStyle);
+            }
         }
 
         switch (dtd)
