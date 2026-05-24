@@ -567,8 +567,14 @@ void wxSVGCanvas::RenderElement(wxSVGElement* elem, const wxSVGRect* rect, const
 			}
 			if (element->GetWidth().GetAnimVal().GetUnitType() != wxSVG_LENGTHTYPE_UNKNOWN)
 				svgElem->SetWidth(element->GetWidth().GetAnimVal());
+            else if (refElem->GetDtd() == wxSVG_SYMBOL_ELEMENT)
+                svgElem->SetWidth(wxSVGLength(wxSVG_LENGTHTYPE_PERCENTAGE, 100));
+
 			if (element->GetHeight().GetAnimVal().GetUnitType() != wxSVG_LENGTHTYPE_UNKNOWN)
 				svgElem->SetHeight(element->GetHeight().GetAnimVal());
+            else if (refElem->GetDtd() == wxSVG_SYMBOL_ELEMENT)
+                svgElem->SetWidth(wxSVGLength(wxSVG_LENGTHTYPE_PERCENTAGE, 100));
+
 			gElem->AddChild(svgElem);
 			LoadImages(refElem, svgElem, progressDlg);
 		} else

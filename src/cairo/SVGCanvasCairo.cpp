@@ -149,12 +149,62 @@ void wxSVGCanvasCairo::SetPaint(cairo_t* cr, const wxSVGPaint& paint, float opac
 			}
 			switch (gradElem->GetDtd()) {
 			case wxSVG_LINEARGRADIENT_ELEMENT: {
+#if 0
 				wxSVGPoint p1, p2;
 				GetLinearGradientVector(p1, p2, (wxSVGLinearGradientElement&) *gradElem, canvasPath);
 				m_pattern = cairo_pattern_create_linear(p1.GetX(), p1.GetY(), p2.GetX(), p2.GetY());
+#else
+                wxSVGPoint p1, p2;
+                auto gradient = *(wxSVGLinearGradientElement*) gradElem;
+                p1.SetX(gradient.GetX1().GetAnimVal());
+                p1.SetY(gradient.GetY1().GetAnimVal());
+
+                wxSVGAnimatedLength x2 = gradient.GetX2();
+                if (x2.GetAnimVal().GetUnitType() == wxSVG_LENGTHTYPE_UNKNOWN)
+                {
+                    x2 = wxSVGLength(wxSVG_LENGTHTYPE_PERCENTAGE, 100);
+                    p2.SetX(x2.GetBaseVal().GetValue());
+                    p2.SetY(gradient.GetY2().GetBaseVal().GetValue());
+                }
+                else
+                {
+                    p2.SetX(gradient.GetX2().GetAnimVal());
+                    p2.SetY(gradient.GetY2().GetAnimVal());
+                }
+
+                wxSVGMatrix gradientTransform;
+
+                if (gradient.GetGradientUnits().GetAnimVal() == wxSVG_UNIT_TYPE_UNKNOWN ||
+                    gradient.GetGradientUnits().GetAnimVal() == wxSVG_UNIT_TYPE_OBJECTBOUNDINGBOX)
+                {
+                    wxSVGRect bbox = canvasPath.GetBBox();
+                    gradientTransform = wxSVGMatrix(bbox.GetWidth(), 0, 0, bbox.GetHeight(),
+                                                    bbox.GetX(), bbox.GetY());
+                }
+
+                const wxSVGTransformList& transforms =  gradient.GetGradientTransform().GetAnimVal();
+                if (transforms.GetCount() > 0)
+                {
+                    wxSVGMatrix patMatrix;
+                    for (unsigned int i = 0; i < transforms.GetCount(); i++)
+                        patMatrix = patMatrix.Multiply(transforms[i].GetMatrix());
+
+                    gradientTransform = gradientTransform.Multiply(patMatrix);
+                }
+
+                gradientTransform = matrix.Multiply(gradientTransform);
+
+                cairo_matrix_t mat;
+                cairo_matrix_init(&mat, gradientTransform.GetA(), gradientTransform.GetB(), gradientTransform.GetC(),
+                                  gradientTransform.GetD(), gradientTransform.GetE(), gradientTransform.GetF());
+                cairo_set_matrix(cr, &mat);
+
+                m_pattern = cairo_pattern_create_linear(p1.GetX(), p1.GetY(), p2.GetX(), p2.GetY());
+#endif
 				break;
 			}
 			case wxSVG_RADIALGRADIENT_ELEMENT: {
+#if 0
 				wxSVGRadialGradientElement* radialGradElem = (wxSVGRadialGradientElement*) gradElem;
 				double r = radialGradElem->GetQualifiedR();
 				double cx = radialGradElem->GetQualifiedCx();
@@ -182,6 +232,43 @@ void wxSVGCanvasCairo::SetPaint(cairo_t* cr, const wxSVGPaint& paint, float opac
 					cairo_matrix_init(&mat, patMatrix.GetA(), patMatrix.GetB(), patMatrix.GetC(), patMatrix.GetD(), patMatrix.GetE(), patMatrix.GetF());
 					cairo_pattern_set_matrix(m_pattern, &mat);
 				}
+#else
+                auto gradient = *(wxSVGRadialGradientElement*) gradElem;
+                double r  = gradient.GetR().GetAnimVal().GetUnitType() == wxSVG_LENGTHTYPE_UNKNOWN  ? .5 : gradient.GetQualifiedR();
+                double cx = gradient.GetCx().GetAnimVal().GetUnitType() == wxSVG_LENGTHTYPE_UNKNOWN ? .5 : gradient.GetQualifiedCx();
+                double cy = gradient.GetCy().GetAnimVal().GetUnitType() == wxSVG_LENGTHTYPE_UNKNOWN ? .5 : gradient.GetQualifiedCy();
+                double fx = gradient.GetFx().GetAnimVal().GetUnitType() == wxSVG_LENGTHTYPE_UNKNOWN ? cx : gradient.GetQualifiedFx();
+                double fy = gradient.GetFy().GetAnimVal().GetUnitType() == wxSVG_LENGTHTYPE_UNKNOWN ? cy : gradient.GetQualifiedFy();
+
+                wxSVGMatrix gradientTransform;
+
+                if (gradient.GetGradientUnits().GetAnimVal() == wxSVG_UNIT_TYPE_UNKNOWN ||
+                    gradient.GetGradientUnits().GetAnimVal() == wxSVG_UNIT_TYPE_OBJECTBOUNDINGBOX)
+                {
+                    wxSVGRect bbox = canvasPath.GetBBox();
+                    gradientTransform = wxSVGMatrix(bbox.GetWidth(), 0, 0, bbox.GetHeight(),
+                                                    bbox.GetX(), bbox.GetY());
+                }
+
+                const wxSVGTransformList& transforms = gradient.GetGradientTransform().GetAnimVal();
+                if (transforms.GetCount() > 0)
+                {
+                    wxSVGMatrix patMatrix;
+                    for (unsigned int i = 0; i < transforms.GetCount(); i++)
+                        patMatrix = patMatrix.Multiply(transforms[i].GetMatrix());
+
+                    gradientTransform = gradientTransform.Multiply(patMatrix);
+                }
+
+                gradientTransform = matrix.Multiply(gradientTransform);
+
+                cairo_matrix_t mat;
+                cairo_matrix_init(&mat, gradientTransform.GetA(), gradientTransform.GetB(), gradientTransform.GetC(),
+                                  gradientTransform.GetD(), gradientTransform.GetE(), gradientTransform.GetF());
+                cairo_set_matrix(cr, &mat);
+
+                m_pattern = cairo_pattern_create_radial(fx, fy, 0.0, cx, cy, r);
+#endif
 				break;
 			}
 			default:
@@ -234,9 +321,11 @@ void wxSVGCanvasCairo::SetPaint(cairo_t* cr, const wxSVGPaint& paint, float opac
 				patMatrix = patMatrix.Translate(patternElem->GetX().GetAnimVal(), patternElem->GetY().GetAnimVal());
 			}
 			wxSVGPatternElement* topPattern = (wxSVGPatternElement*) svgElem.GetElementById(paint.GetUri().substr(1));
-			for (int i = topPattern->GetPatternTransform().GetAnimVal().Count()-1; i >= 0 ; i--) {
-				patMatrix = patMatrix.Multiply(topPattern->GetPatternTransform().GetAnimVal()[i].GetMatrix().Inverse());
-			}
+            if (topPattern) {
+                for (int i = topPattern->GetPatternTransform().GetAnimVal().Count()-1; i >= 0 ; i--) {
+                    patMatrix = patMatrix.Multiply(topPattern->GetPatternTransform().GetAnimVal()[i].GetMatrix().Inverse());
+                }
+            }
 			cairo_matrix_t mat;
 			cairo_matrix_init(&mat, patMatrix.GetA(), patMatrix.GetB(), patMatrix.GetC(), patMatrix.GetD(), patMatrix.GetE(), patMatrix.GetF());
 			cairo_pattern_set_matrix(m_pattern, &mat);
